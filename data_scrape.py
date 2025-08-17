@@ -57,6 +57,76 @@ async def ping_openai(question_text, relevant_context="", max_tries=3):
 
 
 # --- AIProxy API ---
+AIPROXY_URL = "https://aiproxy.openai.com/v1/chat/completions"
+
+async def ping_aiproxy(question_text, relevant_context="", max_tries=3):
+    tries = 0
+    while tries < max_tries:
+        try:
+            if not aiproxy_token:
+                print("❌ AIProxy token not found in environment variables")
+                return {"error": "AIProxy token not configured"}
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {aiproxy_token}"
+            }
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": relevant_context},
+                    {"role": "user", "content": question_text}
+                ]
+            }
+
+            async with httpx.AsyncClient(timeout=60) as client:
+                response = await client.post(AIPROXY_URL, headers=headers, json=payload)
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            print(f"Error during AIProxy call (attempt {tries + 1}): {e}")
+            tries += 1
+    return {"error": "AIProxy failed after max retries"}
+
+
+# --- OpenAI + AIProxy keys ---
+openai_api_key = os.getenv("openai_api_key")
+aiproxy_token = os.getenv("aiproxy_token")
+
+# --- OpenAI API ---
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+
+async def ping_openai(question_text, relevant_context="", max_tries=3):
+    tries = 0
+    while tries < max_tries:
+        try:
+            if not openai_api_key:
+                print("❌ OpenAI API key not found in environment variables")
+                return {"error": "OpenAI API key not configured"}
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {openai_api_key}"
+            }
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": relevant_context},
+                    {"role": "user", "content": question_text}
+                ]
+            }
+
+            async with httpx.AsyncClient(timeout=60) as client:
+                response = await client.post(OPENAI_API_URL, headers=headers, json=payload)
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            print(f"Error during OpenAI call (attempt {tries + 1}): {e}")
+            tries += 1
+    return {"error": "OpenAI failed after max retries"}
+
+
+# --- AIProxy API ---
 AIPROXY_URL = "https://aiproxy.sanand.workers.dev/openai/v1"
 
 async def ping_aiproxy(question_text, relevant_context="", max_tries=3):
@@ -2289,4 +2359,3 @@ class ImprovedWebScraper:
                 "tables_found": 0,
                 "files_saved": []
             }
-
